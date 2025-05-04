@@ -90,8 +90,8 @@ class ShapInteractions:
 
         self.interaction_trends = np.transpose(interaction_trends, (0, 2, 1))
         k = len(feature_names)
-        self.pearsons = np.zeros((k,k))
-        self.spearmans = np.zeros((k,k))
+        self.pearsons, self.pval_pearsons = np.zeros((k,k)), np.zeros((k,k))
+        self.spearmans, self.pval_spearmans = np.zeros((k,k)), np.zeros((k,k))
 
         if compute_correlations:
             self.compute_trend_coefs()
@@ -114,8 +114,8 @@ class ShapInteractions:
                 
                 valid_mask = ~np.isnan(x) & ~np.isnan(y)
 
-                self.pearsons[ind1, ind2], _ = pearsonr(x[valid_mask], y[valid_mask])
-                self.spearmans[ind1, ind2], _ = spearmanr(x[valid_mask], y[valid_mask])
+                self.pearsons[ind1, ind2], self.pval_pearsons[ind1, ind2] = pearsonr(x[valid_mask], y[valid_mask])
+                self.spearmans[ind1, ind2], self.pval_spearmans[ind1, ind2] = spearmanr(x[valid_mask], y[valid_mask])
 
 
     def get_interaction_matrix(self, mode='pos_neg', empty_diag=False, empty_top=False, heatmap=True):
@@ -167,6 +167,7 @@ class ShapInteractions:
             plot_heatmap(interaction_matrix, self.feature_names)
 
         return interaction_matrix
+
     
 
     def create_graph(self, filename='interaction_graph.html', spearmans_threshold=0.3, max_arrows=200):
@@ -190,7 +191,7 @@ class ShapInteractions:
         mean_shap_interactions = abs(self.shap_interactions).mean(axis=0)
         mean_shap_interactions_no_diag = mean_shap_interactions.copy()
 
-        np.fill_diagonal(mean_shap_interactions_no_diag, np.NINF)
+        np.fill_diagonal(mean_shap_interactions_no_diag, float('-inf'))
 
         pairs = []
 
@@ -216,6 +217,10 @@ class ShapInteractions:
 
         net = Network(notebook=True, cdn_resources='in_line', directed=True)
 
+        diagonal_values = np.diag(mean_shap_interactions_norm)
+        diag_min = diagonal_values.min()
+        diag_max = diagonal_values.max()
+
         for i in range(len(self.feature_names)):
             if np.sign(self.spearmans[i,i]) != np.sign(self.pearsons[i,i]) or abs(self.spearmans[i,i])<spearmans_threshold:
                 bg = 'black'
@@ -224,16 +229,25 @@ class ShapInteractions:
                 bg = '#fa3c62' if self.spearmans[i,i]>0 else '#3c8efa'
                 bg_h = '#fa6180' if self.spearmans[i,i]>0 else '#90bcf5'
 
+            pearson_val = self.pearsons[i, i]
+            pearson_pval = self.pval_pearsons[i, i]
+
+            spearman_val = self.spearmans[i, i]
+            spearman_pval = self.pval_spearmans[i, i]
+
             main_title = (
                 f"{self.feature_names[i]}\n"
-                f"Pearson's r: {round(self.pearsons[i,i],2)}\n"
-                f"Spearman's r: {round(self.spearmans[i,i],2)}\n"
+                f"Pearson's r: {pearson_val:.3f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
+                f"Spearman's r: {spearman_val:.3f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
                 f"Mean absolute SHAP: {str(round(mean_shap_interactions[i,i],2))}"
             )
 
+            val = mean_shap_interactions_norm[i][i]
+            scaled = 2 + (val - diag_min) / (diag_max - diag_min) * (40 - 2) if diag_max != diag_min else 21
+
             net.add_node(
                 self.feature_names[i],
-                size=max(2, 10*round(float(mean_shap_interactions_norm[i][i]/4))),
+                size=round(min(40, max(2, scaled))),
                 color={
                     'background': bg,
                     'border': 'black',
@@ -246,6 +260,12 @@ class ShapInteractions:
                 title=main_title
             )
 
+        all_values = mean_shap_interactions_no_diag.flatten()
+        nonzero_values = all_values[all_values > 0]
+
+        vmin = np.min(nonzero_values)
+        vmax = 1
+
         for value, i, j in top_pairs:
             ii, jj = i, j
             for _ in range(2):               
@@ -256,17 +276,29 @@ class ShapInteractions:
 
                 dashes = 1 if abs(self.spearmans[ii,jj]) < spearmans_threshold else 0
 
+                pearson_val = self.pearsons[ii, jj]
+                pearson_pval = self.pval_pearsons[ii, jj]
+
+                spearman_val = self.spearmans[ii, jj]
+                spearman_pval = self.pval_spearmans[ii, jj]
+
                 edge_title = (
                     f"{self.feature_names[ii]} --> {self.feature_names[jj]}\n"
-                    f"Pearson's r: {round(self.pearsons[ii,jj],2)}\n"
-                    f"Spearman's r: {round(self.spearmans[ii,jj],2)}\n"
+                    f"Pearson's r: {pearson_val:.3f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
+                    f"Spearman's r: {spearman_val:.3f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
                     f"Mean absolute SHAP: {str(round(value,2))}"
                 )
+
+                def scale_width(value, vmin, vmax, min_width=0.5, max_width=6):
+                    if vmax == vmin:
+                        return (min_width + max_width) / 2
+                    return min_width + (value - vmin) / (vmax - vmin) * (max_width - min_width)
 
                 edge = {
                     'from': self.feature_names[ii],
                     'to': self.feature_names[jj],
-                    'weight': mean_shap_interactions_norm[ii][jj],
+                    'weight': round(float(mean_shap_interactions_norm[ii][jj]), 4),
+                    'width': round(float(scale_width(mean_shap_interactions_norm[ii][jj], vmin, vmax)), 2),
                     'color': edge_color,
                     'title': edge_title,
                     'dashes': dashes
@@ -284,6 +316,7 @@ class ShapInteractions:
                 edge['from'],
                 edge['to'],
                 color=edge['color'],
+                width=edge['width'],
                 dashes=True if edge['dashes']==1 else False,
                 title=edge['title']
             )
