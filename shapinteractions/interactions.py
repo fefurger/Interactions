@@ -237,8 +237,8 @@ class ShapInteractions:
 
             main_title = (
                 f"{self.feature_names[i]}\n"
-                f"Pearson's r: {pearson_val:.3f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
-                f"Spearman's r: {spearman_val:.3f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
+                f"Pearson's r: {pearson_val:.2f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
+                f"Spearman's r: {spearman_val:.2f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
                 f"Mean absolute SHAP: {str(round(mean_shap_interactions[i,i],2))}"
             )
 
@@ -284,8 +284,8 @@ class ShapInteractions:
 
                 edge_title = (
                     f"{self.feature_names[ii]} --> {self.feature_names[jj]}\n"
-                    f"Pearson's r: {pearson_val:.3f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
-                    f"Spearman's r: {spearman_val:.3f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
+                    f"Pearson's r: {pearson_val:.2f} (pval {'< 0.0001' if pearson_pval < 0.0001 else '= ' + f'{pearson_pval:.4f}'})\n"
+                    f"Spearman's r: {spearman_val:.2f} (pval {'< 0.0001' if spearman_pval < 0.0001 else '= ' + f'{spearman_pval:.4f}'})\n"
                     f"Mean absolute SHAP: {str(round(value,2))}"
                 )
 
