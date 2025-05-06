@@ -4,7 +4,13 @@ This package allows you to create a comprehensive visualization graph of feature
 
 ### Get started
 
-Download this repository or clone it, then navigate to the root directory where *setup.py* should be. Then run:
+To get started, simply run:
+
+```bash
+pip install shapinteractions
+```
+
+Optionally, you can download the repository or clone it, then navigate to the root directory where *setup.py* should be. Then run:
 
 ```bash
 pip install .
