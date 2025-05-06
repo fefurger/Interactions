@@ -4,7 +4,7 @@ This package allows you to create a comprehensive visualization graph of feature
 
 ### Get started
 
-To get started, simply run:
+To get started, you can simply install from PyPi:
 
 ```bash
 pip install shapinteractions
